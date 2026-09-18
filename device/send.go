@@ -229,7 +229,7 @@ func (peer *Peer) SendHandshakeInitiation(isRetry bool) error {
 	crypt := buf[:padding]
 	rand.Read(crypt)
 
-	packet := buf[padding:]
+	packet := buf[padding : padding+MessageInitiationSize]
 	_ = msg.marshal(packet)
 	peer.cookieGenerator.AddMacs(packet)
 
@@ -282,7 +282,7 @@ func (peer *Peer) SendHandshakeResponse() error {
 	crypt := buf[:padding]
 	rand.Read(crypt)
 
-	packet := buf[padding:]
+	packet := buf[padding : padding+MessageResponseSize]
 	_ = response.marshal(packet)
 	peer.cookieGenerator.AddMacs(packet)
 
@@ -340,7 +340,7 @@ func (device *Device) SendHandshakeCookie(initiatingElem *QueueHandshakeElement)
 	crypt := buf[:padding]
 	rand.Read(crypt)
 
-	packet := buf[padding:]
+	packet := buf[padding : padding+MessageCookieReplySize]
 	_ = reply.marshal(packet)
 
 	cip, err := device.HeaderProtectionCipher(crypt[:HeaderCipherNonceSize])
