@@ -555,7 +555,7 @@ func (device *Device) InputPacket(destination []byte, packetSlices [][]byte) {
 		return
 	}
 	elem := device.GetOutboundElement()
-	elem.buffer = device.GetOutboundBuffer(allocLength)
+	elem.buffer = device.GetOutboundBuffer(device.inputBufferSize(allocLength))
 	elem.nonce = 0
 	elem.padding = padding
 	packet := elem.buffer[MessageEncapsulatingTransportSize+MessageTransportHeaderSize+elem.padding:]
@@ -574,6 +574,17 @@ func (device *Device) InputPacket(destination []byte, packetSlices [][]byte) {
 		device.PutOutboundElement(elem)
 		device.PutOutboundElementsContainer(elemsForPeer)
 	}
+}
+
+// inputBufferSize returns the buffer size for a packet entering through
+// InputPacket(s). RoutineEncryption may append random trailers or content
+// padding up to the peer's UDP window, so an exact-size buffer overflows and
+// panics when the ciphertext is sliced back out of elem.buffer.
+func (device *Device) inputBufferSize(allocLength int) int {
+	if device.randomTrailers.Load() || !device.contentPaddingAddition.Load().IsZero() {
+		return MaxMessageSize
+	}
+	return allocLength
 }
 
 type InputPacketRef struct {
@@ -603,7 +614,7 @@ func (device *Device) InputPackets(packets []*InputPacketRef) []*InputPacketRef 
 			continue
 		}
 		elem := device.GetOutboundElement()
-		elem.buffer = device.GetOutboundBuffer(allocLength)
+		elem.buffer = device.GetOutboundBuffer(device.inputBufferSize(allocLength))
 		elem.nonce = 0
 		elem.padding = padding
 		packet := elem.buffer[MessageEncapsulatingTransportSize+MessageTransportHeaderSize+elem.padding:]
